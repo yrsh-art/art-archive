@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { motion } from 'framer-motion'
-import { Search, Filter, Grid, List, ImageOff, Tag, X } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Search, Filter, Grid, List, ImageOff, Tag, X, CheckCircle2, Trash2, XCircle } from 'lucide-react'
 import { useArtworks } from '../context/ArtworkContext'
 import ArtworkCard from '../components/features/ArtworkCard'
 
@@ -12,7 +12,7 @@ const sortOptions = [
 ]
 
 export default function Gallery() {
-  const { artworks, categories: userCategories } = useArtworks()
+  const { artworks, categories: userCategories, deleteArtwork } = useArtworks()
   const [searchParams, setSearchParams] = useSearchParams()
 
   const categories = [{ id: 'all', name: '全部' }, ...userCategories]
@@ -25,8 +25,9 @@ export default function Gallery() {
   })
   const [sortBy, setSortBy] = useState('newest')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [selectMode, setSelectMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
-  // Sync URL params on mount
   useEffect(() => {
     const tagParam = searchParams.get('tag')
     const categoryParam = searchParams.get('category')
@@ -38,7 +39,6 @@ export default function Gallery() {
     }
   }, [searchParams])
 
-  // Extract all unique tags from artworks, sorted by frequency
   const allTags = useMemo(() => {
     const tagCount: Record<string, number> = {}
     artworks.forEach(a => {
@@ -51,16 +51,13 @@ export default function Gallery() {
       .map(([tag]) => tag)
   }, [artworks])
 
-  // Combined filtering: category -> search -> tags -> sort
   const filteredArtworks = useMemo(() => {
     let result = artworks
 
-    // Category filter
     if (selectedCategory !== 'all') {
       result = result.filter(a => a.category === selectedCategory)
     }
 
-    // Search filter
     if (searchQuery) {
       const lowerQuery = searchQuery.toLowerCase()
       result = result.filter(a =>
@@ -70,14 +67,12 @@ export default function Gallery() {
       )
     }
 
-    // Tag filter (AND logic)
     if (selectedTags.length > 0) {
       result = result.filter(a =>
         selectedTags.every(tag => a.tags.includes(tag))
       )
     }
 
-    // Sort
     return [...result].sort((a, b) => {
       switch (sortBy) {
         case 'newest':
@@ -113,6 +108,42 @@ export default function Gallery() {
     return labels
   }, [categories])
 
+  const toggleSelectMode = () => {
+    setSelectMode(prev => !prev)
+    setSelectedIds(new Set())
+  }
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  const selectAll = () => {
+    setSelectedIds(new Set(filteredArtworks.map(a => a.id)))
+  }
+
+  const deselectAll = () => {
+    setSelectedIds(new Set())
+  }
+
+  const deleteSelected = async () => {
+    if (selectedIds.size === 0) return
+    if (!confirm(`确定要删除选中的 ${selectedIds.size} 个素材吗？`)) return
+    
+    for (const id of selectedIds) {
+      await deleteArtwork(id)
+    }
+    setSelectedIds(new Set())
+    setSelectMode(false)
+  }
+
   return (
     <div className="min-h-screen py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -125,7 +156,6 @@ export default function Gallery() {
           <p className="text-gray-400">共 {filteredArtworks.length} 个素材</p>
         </motion.div>
 
-        {/* Active filter chips */}
         {hasActiveFilters && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
@@ -208,7 +238,6 @@ export default function Gallery() {
                 </div>
               </div>
 
-              {/* Tag filter section */}
               {allTags.length > 0 && (
                 <div className="mb-6">
                   <h3 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
@@ -259,7 +288,20 @@ export default function Gallery() {
           </motion.div>
 
           <div className="flex-1">
-            <div className="flex justify-end mb-4">
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex gap-2">
+                <button
+                  onClick={toggleSelectMode}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
+                    selectMode
+                      ? 'bg-purple-500/20 text-purple-400'
+                      : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                  }`}
+                >
+                  <CheckCircle2 className="w-5 h-5" />
+                  {selectMode ? '取消选择' : '批量选择'}
+                </button>
+              </div>
               <div className="flex gap-2">
                 <button
                   onClick={() => setViewMode('grid')}
@@ -284,6 +326,45 @@ export default function Gallery() {
               </div>
             </div>
 
+            <AnimatePresence>
+              {selectMode && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="flex items-center gap-3 mb-4 p-3 rounded-xl glass"
+                >
+                  <span className="text-sm text-gray-300">
+                    已选择 <span className="text-purple-400 font-semibold">{selectedIds.size}</span> 个素材
+                  </span>
+                  <button
+                    onClick={selectAll}
+                    className="text-sm text-purple-400 hover:text-purple-300 transition-colors"
+                  >
+                    全选
+                  </button>
+                  <button
+                    onClick={deselectAll}
+                    className="text-sm text-gray-400 hover:text-gray-300 transition-colors"
+                  >
+                    取消全选
+                  </button>
+                  <div className="flex-1" />
+                  {selectedIds.size > 0 && (
+                    <motion.button
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      onClick={deleteSelected}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      删除选中 ({selectedIds.size})
+                    </motion.button>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {filteredArtworks.length === 0 ? (
               <motion.div
                 initial={{ opacity: 0 }}
@@ -305,7 +386,27 @@ export default function Gallery() {
                   : 'space-y-4'
               }>
                 {filteredArtworks.map((artwork, index) => (
-                  <ArtworkCard key={artwork.id} artwork={artwork} index={index} />
+                  <div key={artwork.id} className="relative">
+                    {selectMode && (
+                      <div
+                        className="absolute top-3 left-3 z-10 cursor-pointer"
+                        onClick={() => toggleSelect(artwork.id)}
+                      >
+                        {selectedIds.has(artwork.id) ? (
+                          <CheckCircle2 className="w-6 h-6 text-purple-400 fill-purple-400/20" />
+                        ) : (
+                          <div className="w-6 h-6 rounded-full border-2 border-gray-500 bg-black/50" />
+                        )}
+                      </div>
+                    )}
+                    <ArtworkCard
+                      artwork={artwork}
+                      index={index}
+                      selectable={selectMode}
+                      selected={selectedIds.has(artwork.id)}
+                      onSelect={toggleSelect}
+                    />
+                  </div>
                 ))}
               </div>
             )}

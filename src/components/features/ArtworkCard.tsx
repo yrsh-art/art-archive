@@ -8,9 +8,12 @@ import { useArtworks } from '../../context/ArtworkContext'
 interface ArtworkCardProps {
   artwork: Artwork
   index: number
+  selectable?: boolean
+  selected?: boolean
+  onSelect?: (id: string) => void
 }
 
-export default function ArtworkCard({ artwork, index }: ArtworkCardProps) {
+export default function ArtworkCard({ artwork, index, selectable, selected, onSelect }: ArtworkCardProps) {
   const [isHovered, setIsHovered] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
@@ -66,16 +69,26 @@ export default function ArtworkCard({ artwork, index }: ArtworkCardProps) {
     navigate(`/gallery?tag=${encodeURIComponent(tag)}`)
   }
 
+  const handleClick = () => {
+    if (selectable && onSelect) {
+      onSelect(artwork.id)
+    } else {
+      setShowModal(true)
+    }
+  }
+
   return (
     <>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: index * 0.05 }}
-        className="group relative rounded-xl overflow-hidden glass card-hover cursor-pointer"
+        className={`group relative rounded-xl overflow-hidden glass card-hover cursor-pointer ${
+          selected ? 'ring-2 ring-purple-500' : ''
+        }`}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        onClick={() => setShowModal(true)}
+        onClick={handleClick}
       >
         <div className="aspect-square overflow-hidden">
           <img
@@ -86,43 +99,45 @@ export default function ArtworkCard({ artwork, index }: ArtworkCardProps) {
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         </div>
 
-        <motion.div
-          initial={false}
-          animate={{ opacity: isHovered ? 1 : 0 }}
-          className="absolute top-3 right-3 flex gap-2"
-        >
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              toggleFavorite(artwork.id)
-            }}
-            className={`p-2 rounded-full glass transition-colors ${
-              artwork.favorite
-                ? 'text-red-400'
-                : 'text-white/70 hover:text-red-400'
-            }`}
+        {!selectable && (
+          <motion.div
+            initial={false}
+            animate={{ opacity: isHovered ? 1 : 0 }}
+            className="absolute top-3 right-3 flex gap-2"
           >
-            <Heart className={`w-5 h-5 ${artwork.favorite ? 'fill-red-400' : ''}`} />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              if (confirm('确定要删除这个素材吗？')) {
-                deleteArtwork(artwork.id)
-              }
-            }}
-            className="p-2 rounded-full glass text-white/70 hover:text-red-400 transition-colors"
-          >
-            <Trash2 className="w-5 h-5" />
-          </button>
-        </motion.div>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                toggleFavorite(artwork.id)
+              }}
+              className={`p-2 rounded-full glass transition-colors ${
+                artwork.favorite
+                  ? 'text-red-400'
+                  : 'text-white/70 hover:text-red-400'
+              }`}
+            >
+              <Heart className={`w-5 h-5 ${artwork.favorite ? 'fill-red-400' : ''}`} />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                if (confirm('确定要删除这个素材吗？')) {
+                  deleteArtwork(artwork.id)
+                }
+              }}
+              className="p-2 rounded-full glass text-white/70 hover:text-red-400 transition-colors"
+            >
+              <Trash2 className="w-5 h-5" />
+            </button>
+          </motion.div>
+        )}
 
         <div className="absolute bottom-0 left-0 right-0 p-4 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300">
           <h3 className="font-semibold text-white mb-1 truncate">{artwork.title}</h3>
           <p className="text-sm text-gray-300 line-clamp-2">{artwork.description}</p>
         </div>
 
-        {artwork.favorite && (
+        {artwork.favorite && !selectable && (
           <div className="absolute top-3 left-3">
             <Heart className="w-5 h-5 text-red-400 fill-red-400" />
           </div>
