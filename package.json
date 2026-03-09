@@ -1,0 +1,94 @@
+{
+  "name": "art-archive",
+  "productName": "Art Archive",
+  "description": "艺术素材管理平台 - 为艺术创作者打造的素材积累工具",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "main": "electron/main.cjs",
+  "author": "Art Archive Team",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "electron:dev": "concurrently -k \"cross-env BROWSER=none npm run dev\" \"wait-on http://localhost:5173 && cross-env NODE_ENV=development electron .\"",
+    "electron:build": "npm run build && electron-builder",
+    "electron:build:win": "npm run build && electron-builder --win",
+    "electron:build:mac": "npm run build && electron-builder --mac",
+    "electron:build:linux": "npm run build && electron-builder --linux"
+  },
+  "dependencies": {
+    "framer-motion": "^12.34.3",
+    "lucide-react": "^0.575.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^7.13.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@tailwindcss/vite": "^4.2.1",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "babel-plugin-react-compiler": "^1.0.0",
+    "concurrently": "^9.2.1",
+    "cross-env": "^7.0.3",
+    "electron": "^40.6.1",
+    "electron-builder": "^26.8.1",
+    "eslint": "^9.39.1",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.4.24",
+    "globals": "^16.5.0",
+    "tailwindcss": "^4.2.1",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.48.0",
+    "vite": "^8.0.0-beta.13",
+    "wait-on": "^9.0.4"
+  },
+  "overrides": {
+    "vite": "^8.0.0-beta.13"
+  },
+  "build": {
+    "appId": "com.artarchive.app",
+    "productName": "Art Archive",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "electron/assets/icon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "electron/assets/icon.icns"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "electron/assets/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "electron/assets/icon.ico",
+      "uninstallerIcon": "electron/assets/icon.ico",
+      "installerHeaderIcon": "electron/assets/icon.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Art Archive"
+    }
+  }
+}
